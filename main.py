@@ -3,13 +3,22 @@ from sklearn.base import BaseEstimator
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import cross_val_score
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.tree import DecisionTreeRegressor
 pd.options.mode.chained_assignment = None  # default='warn'
+
 
 # easy way of accessing A_6, A_7, ... A_N columns
 def column_list(letter, start, end):
     return ["%s%d" % (letter, i) for i in range(start, end)]
+
+
+def remove_outliers(column, target, first, second):
+    non_outliers = target.between(target.quantile(first), target.quantile(second))
+
+    for index in range(0, len(column)):
+        if ~non_outliers[index]:
+            column.drop(index, inplace=True)
 
 
 # convert strings to int type even if it's a float
@@ -42,44 +51,47 @@ class SumTransformer(BaseEstimator):
         # change to for i in ["A", "T"] to include tardies if need be
         for i in ["A"]:
 
-            # corrects the data frame that will be used in the training models
+            # corrects the values in the data frame that will be used in the training models
             for j in column_list(i, 6, 9):
                 df[j] = df[j].apply(convert_stat, self.new_value)
-
-            # corrects the data frame not used in the training models
-            # but contains the sum of absences in high school, a feature not included in
-            # the data frame that is used in the models
-            for j in column_list(i, 9, 13):
-                student_data[j] = student_data[j].apply(convert_stat, self.new_value)
-
-        # creates the required objective feature
-        # before this statement, the column is empty
-        df['AbsencesSum_HS'] = student_data[column_list('A', 9, 13)].sum(axis=1)
 
         return df
 
 
 student_data = pd.read_csv("data/High School East Student Data - Sheet1.csv")
-features = ["A6", "A7", "A8"]
+features = ["A6", "A7", "A8", "Gender", "IEP/Specialized"]
 student_data["AbsencesSum_HS"] = 0
 
 pre_process = ColumnTransformer(remainder='passthrough',
-                                transformers=[('categories', LabelEncoder(), ["Gender", "IEP/Specialized"])])
+                                transformers=[('categories', OneHotEncoder(), ["Gender", "IEP/Specialized"])])
 
 model_pipeline = Pipeline(steps=[('number_fix', SumTransformer(student_data)),
-                               #  ('pre_process', pre_process),
-                                 ('Decision Tree', DecisionTreeRegressor(max_leaf_nodes=12))
+                                 ('pre_process', pre_process),
+                                 ('Decision Tree', DecisionTreeRegressor(random_state=1))
                                  ])
 
+# Pipeline doesn't allow transformations on the target label
+# so I have to do transformations outside of Pipeline in order
+# to sum all absences in High School for each student.
 for j in column_list("A", 9, 13):
     student_data[j] = student_data[j].apply(convert_stat)
 
 student_data["AbsencesSum_HS"] = student_data[column_list('A', 9, 13)].sum(axis=1)
+
+# because we've created the total absences in high school column
+# we are now able to eliminate outliers in the dataset.
+remove_outliers(student_data, student_data["AbsencesSum_HS"], 0, 0.95)
+
+
 scores = -1 * cross_val_score(model_pipeline,
                               student_data[features],
                               student_data["AbsencesSum_HS"],
-                              cv=4,
+                              cv=5,
                               scoring='neg_mean_absolute_error')
-print(student_data["AbsencesSum_HS"])
+
 print(scores)
 
+"""
+Outliers removed: [23.43076923 16.23076923 15.76923077 17.93846154 19.58333333]
+With Outliers: [24.32857143 16.57142857 20.14285714 16.01538462 27.]
+"""
