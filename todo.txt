@@ -1,0 +1,48 @@
+To-do:
+
+Learning How to Pipeline => Done
+
+Feature Importance
+    RECFV - check this one out again.
+    Ranking => Done
+
+
+Data binning (DataCamp)
+    Calculating variance in the cross validation score
+
+Scaling Data
+
+Create Tests
+
+Imputing Data
+    Changing TRANSFER into None Types and check what happens
+
+Testing Different Machine Learning Models
+
+Fine-Tuning The Machine Learning Models
+    Doing a Grid Search
+
+Look around DataCamp Courses and check if there's anything interesting
+after all the steps
+
+=======================================
+
+Finishing up Statistcal Thinking Course
+    part one DONE
+    part two
+    taking notes
+
+Doing the Other Statistics Course
+
+Applying Hacker Statistics on the dataset
+
+Adding the rest of the data
+
+======================================
+
+AFTER EVERYTHING IS DONE
+Write up the paper.
+Write up the literature
+?????
+profit.
+
