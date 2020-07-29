@@ -1,9 +1,13 @@
+
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.base import BaseEstimator
-from sklearn.pipeline import Pipeline
 from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, KBinsDiscretizer
 from sklearn.tree import DecisionTreeRegressor
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -15,11 +19,14 @@ def column_list(letter, start, end):
 
 def remove_outliers(column, target, first, second):
     non_outliers = target.between(target.quantile(first), target.quantile(second))
+    count = 0
 
     for index in range(0, len(column)):
         if ~non_outliers[index]:
+            count += 1
             column.drop(index, inplace=True)
 
+    print("%i outliers were removed" % count)
 
 # convert strings to int type even if it's a float
 # replace by median or mean?
@@ -40,9 +47,10 @@ class SumTransformer(BaseEstimator):
     # set new_value to None if Pipeline contains SimpleImputer
     # this is for absences and tardies since somet students are
     # transfer students. The placeholder in the CSV is the string "TRANSFER"
-    def __init__(self, student_data, new_value=0):
+    def __init__(self, new_value=0, bins=1, transformation="fixed"):
         self.new_value = new_value
-        self.student_data = student_data
+        self.transformation = transformation
+        self.bins = float(bins)
 
     def fit(self, x, y=None):
         return self
@@ -53,22 +61,36 @@ class SumTransformer(BaseEstimator):
 
             # corrects the values in the data frame that will be used in the training models
             for j in column_list(i, 6, 9):
-                df[j] = df[j].apply(convert_stat, self.new_value)
+
+                # if no function is provided, the stats will be converted regularly
+                # where it can be divided into fixed-width bins
+                # though unnecessary, this is to make testing feature engineering much easier
+                if self.transformation == "fixed":
+                    df[j] = df[j].apply(lambda x: np.floor(convert_stat(x, self.new_value) / self.bins))
+                elif self.transformation == "log":
+                    df[j] = df[j].apply(lambda x: np.log((1 + convert_stat(x, new_value=self.new_value))))
+
+                else:
+                    raise Exception("Transformation argument was not correctly assigned.")
 
         return df
 
+def run_test(data, target, pipeline, features_=["A6", "A7", "A8"]):
+
+    scores_ = -1 * cross_val_score(pipeline,
+                              data[features_],
+                              data[target],
+                              cv=5,
+                              scoring='neg_mean_absolute_error')
+
+    return scores_
+
+print("pass")
+
 
 student_data = pd.read_csv("data/High School East Student Data - Sheet1.csv")
-features = ["A6", "A7", "A8", "Gender", "IEP/Specialized"]
+features = ["A6", "A7", "A8"]
 student_data["AbsencesSum_HS"] = 0
-
-pre_process = ColumnTransformer(remainder='passthrough',
-                                transformers=[('categories', OneHotEncoder(), ["Gender", "IEP/Specialized"])])
-
-model_pipeline = Pipeline(steps=[('number_fix', SumTransformer(student_data)),
-                                 ('pre_process', pre_process),
-                                 ('Decision Tree', DecisionTreeRegressor(random_state=1))
-                                 ])
 
 # Pipeline doesn't allow transformations on the target label
 # so I have to do transformations outside of Pipeline in order
@@ -82,16 +104,35 @@ student_data["AbsencesSum_HS"] = student_data[column_list('A', 9, 13)].sum(axis=
 # we are now able to eliminate outliers in the dataset.
 remove_outliers(student_data, student_data["AbsencesSum_HS"], 0, 0.95)
 
+pre_process = ColumnTransformer(remainder='passthrough',
+                                transformers=[('categories', OneHotEncoder(), ["Gender", "IEP/Specialized"])])
 
-scores = -1 * cross_val_score(model_pipeline,
-                              student_data[features],
-                              student_data["AbsencesSum_HS"],
-                              cv=5,
-                              scoring='neg_mean_absolute_error')
+model_pipeline = Pipeline(steps=[('number_fix', SumTransformer()),
+                                 ('model', DecisionTreeRegressor(random_state=1))
+                                 ])
 
-print(scores)
+#######################################
+# Sorta like unit testing but in jupyter
+test = run_test(student_data, "AbsencesSum_HS", model_pipeline)
+prior_run = np.array([23.43076923, 16.23076923, 15.76923077, 17.93846154, 19.58333333])
 
-"""
-Outliers removed: [23.43076923 16.23076923 15.76923077 17.93846154 19.58333333]
-With Outliers: [24.32857143 16.57142857 20.14285714 16.01538462 27.]
-"""
+if not np.allclose(test, prior_run, atol=0.001):
+    raise Exception("Modification to pre-processing led to unintended results.")
+#######################################
+
+print("pass")
+
+import scipy.stats as spstats
+import copy as cp
+data_copy_boxcox = cp.deepcopy(student_data)
+
+boxcox_pipeline_test = Pipeline(steps=[('number_fix', SumTransformer(transformation="boxcox")),
+                            #     ('preprocess', pre_process),
+                                 ('model', DecisionTreeRegressor(random_state=1))
+                                 ])
+
+scores_boxcox = np.array(run_test(data_copy_boxcox, "AbsencesSum_HS", boxcox_pipeline_test, features_=features))
+print("Scores: ", scores_boxcox)
+print("Score mean: ", np.mean(scores_boxcox))
+print("Score variances: ", np.var(scores_boxcox))
+
