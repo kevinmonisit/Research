@@ -7,12 +7,13 @@ Feature Importance
     Ranking => Done
 
 
-Data binning (DataCamp)
+Data binning (DataCamp) Done
     Calculating variance in the cross validation score
 
-Scaling Data
+Scaling Data DONE
+maybe look into it more
 
-Create Tests
+Create Tests DONE
 
 Imputing Data
     Changing TRANSFER into None Types and check what happens
