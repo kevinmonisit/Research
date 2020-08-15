@@ -6,7 +6,6 @@ Feature Importance
     RECFV - check this one out again.
     Ranking => Done
 
-
 Data binning (DataCamp) Done
     Calculating variance in the cross validation score
 
@@ -17,6 +16,9 @@ Create Tests DONE
 
 Imputing Data DONE
     Changing TRANSFER into None Types and check what happens
+
+Check this decision tree plot out:
+https://scikit-learn.org/stable/auto_examples/ensemble/plot_adaboost_regression.html
 
 Testing Different Machine Learning Models
 
