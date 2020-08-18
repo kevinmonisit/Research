@@ -4,7 +4,6 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import cross_val_score
 from sklearn.preprocessing import OneHotEncoder
-from sklearn.impute import SimpleImputer
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -23,25 +22,25 @@ class CustomTransformer(BaseEstimator, TransformerMixin):
         if self.bins == 0:
             raise ValueError("Bins cannot be set to 0")
 
-        if self.new_value is None and self.using_imputer is None:
-            raise ValueError("New value has been set to None but imputer strategy is still None.")
+        if np.isnan(self.new_value) and not self.using_imputer:
+            raise Exception("If new_value is nan, then an imputer must be used. If being used, set",
+                            "using_imputer to True")
 
     def fit(self, x, y=None):
         return self
 
+    """
+    Transformers all the values and converts strings and "TRANSFER" to something legitimate.
+    
+    """
     def transform(self, df):
 
-        imputer = None
-
-        if self.using_imputer:
-            imputer = SimpleImputer(strategy=self.using_imputer)
-
-        for x in df:
+        for i in column_list("A", 6, 9):
             if self.transformation == "fixed":
-                df[x] = df[x].apply(transform_value, args=(imputer, self.bins, self.new_value))
+                df[i] = df[i].apply(convert_absence_columns, args=(self.new_value, self.bins))
 
             elif self.transformation == "log":
-                df[x] = df[x].apply(lambda j: np.log((1 + convert_stat(j, new_value=self.new_value))))
+                df[i] = df[i].apply(lambda j: np.log((1 + convert_absence_columns(j, self.new_value, self.bins))))
 
             else:
                 raise Exception("Transformation argument was not correctly assigned.")
@@ -74,31 +73,20 @@ def remove_outliers(column, target, lower_bound: float = 0., upper_bound: float 
     return count
 
 
-# convert strings to int type even if it's a float
-def convert_stat(x, new_value=0):
-    if not isinstance(x, int):
-
-        if not isinstance(x, float) and '.' not in x:
-            return new_value if x == "TRANSFER" else int(x)
-        else:
-            return new_value if x == "TRANSFER" else int(float(x))
-
-    else:
-        return x
-
-
-# for using imputer and binning. can't use convert_stat only,
-# since you can't divide None by anything
-def transform_value(x, imputer=False, bins=1, new_value=0):
-    value = convert_stat(x, new_value=new_value)
-
+def convert_absence_columns(x, new_value=0, bins=1):
     """
-    If imputer is not None, then new_value should be set to some value
-    that the imputer will use to identify cells.
-    
-    The imputer still needs to be set in the pipeline!!
+    Columns that contain "TRANSFER" are converted to strings, so they must be converted.
+    Also, "TRANSFER" cells are considered to be missing values, so they are assigned
+    to a new_value.
     """
-    return np.floor(value / float(bins)) if not imputer else value
+    if x != "TRANSFER":
+        try:
+            return np.floor(int(float(x)) / float(bins))
+        except ValueError:
+            print("Absence cell is neither \"TRANSFER\" or a number.")
+
+    elif x == "TRANSFER":
+        return new_value
 
 
 def run_test(data, target, pipeline, features_=None):
@@ -113,6 +101,17 @@ def run_test(data, target, pipeline, features_=None):
     return scores
 
 
+"""
+There are some critical preprocessing that goes on before the test split.
+Although it happens before the test split, they are general enough that
+it will not cause data leakage.
+
+Creating a "AbsencesSum_HS" column is impossible to do when working with the pipeline.
+Thus, it is beyond my control. Therefore, I must transform and impute. The binning is
+done in the Pipeline, though.
+"""
+
+
 def create_student_data(path, lower_bound: float = 0, upper_bound: float = 0.95):
     student_data = pd.read_csv(path)
 
@@ -122,7 +121,7 @@ def create_student_data(path, lower_bound: float = 0, upper_bound: float = 0.95)
     # so I have to do transformations outside of Pipeline in order
     # to sum all absences in High School for each student.
     for j in column_list("A", 9, 13):
-        student_data[j] = student_data[j].apply(convert_stat)
+        student_data[j] = student_data[j].apply(convert_absence_columns)
 
     student_data["AbsencesSum_HS"] = student_data[column_list('A', 9, 13)].sum(axis=1)
 

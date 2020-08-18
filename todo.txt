@@ -23,14 +23,28 @@ https://scikit-learn.org/stable/auto_examples/ensemble/plot_adaboost_regression.
 Testing Different Machine Learning Models
 
 Fine-Tuning The Machine Learning Models
-    Doing a Grid Search
+    Doing a Grid Search --> DONE
+
+Take care of other variables
+
+Split Test data and train data
+
+Clean up code
+    Needs Cleaning: 8/16/2020
+
+Plot the results and see how it works out.
+    Does it fail to predict outliers or high absences??
+
+Test out Bayesian/Coarse to Fine hyperparameter tuning
+
+Implement KFolds
 
 Look around DataCamp Courses and check if there's anything interesting
 after all the steps
 
 =======================================
 
-Finishing up Statistcal Thinking Course
+Finishing up Statistical Thinking Course
     part one DONE
     part two
     taking notes
@@ -48,4 +62,18 @@ Write up the paper.
 Write up the literature
 ?????
 profit.
+
+
+========== To do log ======
+8/16/2020
+
+Work on cleaning up some code (fix the jupyter notebooks)
+    Done with model_setup stuff
+    Will fix jupyter notebooks for feature_testing later. It's not important.
+
+Add new models (from academic papers) -->
+Train_test_split implementation --> DONE
+Add new data
+
+
 

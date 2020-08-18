@@ -1,0 +1,63 @@
+
+4 outliers were removed
+(64, 22)
+Estimator:  RandomForestRegressor(random_state=1)
+Scoring used:  neg_mean_absolute_error
+Best parameters:  {'transform__imputer__strategy': 'most_frequent', 'number_transformer__bins': 4, 'model__n_estimators': 53, 'model__max_features': 'auto', 'model__max_depth': 1}
+Best/Mean score using best parameters:  -13.803647829265893
+Variance:  0.8361631263150955
+
+4 outliers were removed
+(64, 22)
+Estimator:  RandomForestRegressor(random_state=1)
+Scoring used:  neg_mean_absolute_error
+Best parameters:  {'transform__imputer__strategy': 'constant', 'number_transformer__bins': 1, 'model__n_estimators': 71, 'model__max_features': 'auto', 'model__max_depth': 1}
+Best/Mean score using best parameters:  -13.982185895587085
+Variance:  0.8803782055259683
+
+4 outliers were removed
+(64, 22)
+Estimator:  RandomForestRegressor(random_state=1)https://learn.datacamp.com/my-bookmarks
+Scoring used:  neg_mean_absolute_error
+Best parameters:  {'model__max_depth': 1, 'model__max_features': 'auto', 'model__n_estimators': 1, 'number_transformer__bins': 1, 'transform__imputer__strategy': 'mean'}
+Best/Mean score using best parameters:  -13.449235865583692
+Variance:  0.2744575954896179
+"""
+
+The reason the variance is so low is because
+originally, the imputer strategy was constant. (new_value=0)
+"""
+Estimator:  LinearRegression()
+Best parameters:  {'model__normalize': True, 'preprocessor__transform__bins': 8}
+Best score:  -13.581855686902696
+Variance:  0.7745412719153173
+Coefficients:  [-0.65948776  2.59962559 19.99600742]
+
+4 outliers were removed
+(64, 22)
+Estimator:  LinearRegression()
+Scoring used:  neg_mean_absolute_error
+Best parameters:  {'imputer__strategy': 'mean', 'model__normalize': True, 'number_transformer__bins': 8}
+Best/Mean score using best parameters:  -13.0647446179895
+Variance:  1.270420335310607
+Coefficients:  [-0.69961119  3.81796315 20.57993367]
+"""
+
+=============================================
+
+Estimator:  RandomForestRegressor(random_state=1)
+Number of iterations:  20
+Scoring used:  neg_mean_absolute_error
+Best parameters:  {'transform__imputer__strategy': 'mean', 'number_transformer__bins': 1, 'model__n_estimators': 46, 'model__max_features': 'auto', 'model__max_depth': 1}
+Best/Mean score using best parameters:  -13.993722641650255
+Variance:  7.064672820890181
+
+
+NEW
+Estimator:  ElasticNet(random_state=1)
+Number of iterations:  500
+Scoring used:  neg_mean_absolute_error
+Best parameters:  {'model__alpha': 1.0023052380778996, 'model__l1_ratio': 1.0, 'model__max_iter': 5000, 'model__normalize': True, 'number_transformer__bins': 8, 'transform__imputer__strategy': 'mean'}
+Best/Mean score using best parameters:  -14.369996101518893
+Variance:  3.1667319638273534
+Score:  -16.27675549794163
