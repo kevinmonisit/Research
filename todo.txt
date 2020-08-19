@@ -39,6 +39,8 @@ Test out Bayesian/Coarse to Fine hyperparameter tuning
 
 Implement KFolds
 
+Use SVMs
+
 Look around DataCamp Courses and check if there's anything interesting
 after all the steps
 
@@ -71,9 +73,11 @@ Work on cleaning up some code (fix the jupyter notebooks)
     Done with model_setup stuff
     Will fix jupyter notebooks for feature_testing later. It's not important.
 
-Add new models (from academic papers) -->
+Add new models (from academic papers) --> DONE?
 Train_test_split implementation --> DONE
 Add new data
+
+
 
 
 
