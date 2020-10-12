@@ -61,3 +61,34 @@ Best parameters:  {'model__alpha': 1.0023052380778996, 'model__l1_ratio': 1.0, '
 Best/Mean score using best parameters:  -14.369996101518893
 Variance:  3.1667319638273534
 Score:  -16.27675549794163
+
+=================== 8/23/2020
+RANDOM FOREST TEST ========
+========
+Estimator:  RandomForestRegressor(random_state=1)
+Number of iterations:  200
+Scoring used:  neg_mean_absolute_error
+Best parameters:  {'transform__imputer__strategy': 'median', 'number_transformer__bins': 11, 'model__n_estimators': 31, 'model__max_features': 'sqrt', 'model__max_depth': 46}
+Best/Mean score using best parameters:  -14.521192872868237
+Variance:  5.864683941877879
+
+Estimator:  RandomForestRegressor(random_state=1)
+Number of iterations:  1
+Scoring used:  neg_mean_absolute_error
+Best parameters:  {'transform__imputer__strategy': 'constant', 'number_transformer__bins': 11, 'model__n_estimators': 71, 'model__max_features': 'auto', 'model__max_depth': 1}
+Best/Mean score using best parameters:  -15.104687442857053
+Variance:  6.482720322598392
+
+=================================================
+Estimator:  RandomForestRegressor(random_state=1)
+Number of iterations:  200
+Scoring used:  neg_mean_absolute_error
+Best parameters:  {'transform__imputer__strategy': 'mean', 'number_transformer__bins': 11, 'model__n_estimators': 11, 'model__max_features': 'sqrt', 'model__max_depth': 21}
+Best/Mean score using best parameters:  -14.202703206074556
+Variance:  7.439833855555536
+-16.45213057051484
+'\nridge_grid = dict(model__alpha=list(np.logspace(0.01, 2, 25)),\n                  preprocessor__transform__imputer_strategy=["mean", "median"],\n                  preprocessor__transform__bins=range(1, 20))\n\n#ridge = grid_search_scores(Ridge(random_state=1), ridge_grid)\n#-17.7802986264604, -14.751912705849396\n\nelastic_grid = dict(model__l1_ratio=np.arange(0, 1, 25),\n                    model__alpha=np.logspace(0.001, 10, 25))\n#elastic_net = grid_search_scores(ElasticNet(random_state=1, max_iter=10000, normalize=True), elastic_grid)\n\n\nhttps://kazemnejad.com/blog/how_to_do_deep_learning_research_with_absolutely_no_gpus_part_2/\n'
+Session is starting...
+
+=========================== 8/26/20 After adding the new data and running on Google Cloud
+

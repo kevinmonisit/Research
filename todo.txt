@@ -37,9 +37,9 @@ Plot the results and see how it works out.
 
 Test out Bayesian/Coarse to Fine hyperparameter tuning
 
-Implement KFolds
+Implement KFolds - 8/22
 
-Use SVMs
+Use SVMs - 8/22
 
 Look around DataCamp Courses and check if there's anything interesting
 after all the steps
@@ -77,7 +77,62 @@ Add new models (from academic papers) --> DONE?
 Train_test_split implementation --> DONE
 Add new data
 
+8/22/20
+Implementing KFolds and Stratified? Kfolds DONE
+Testing SVMs DONE
+Bayesian/Coarse to Fine Tuning
+
+Read: https://machinelearningmastery.com/repeated-k-fold-cross-validation-with-python/
+
+Appropriate: for small datasets and simple models (e.g. linear).
+"As such, the approach is suited for small- to modestly-sized datasets and/or models that are not too computationally costly to fit and evaluate.
+This suggests that the approach may be appropriate for
+linear models and not appropriate for slow-to-fit models like deep learning neural networks."
+
+8/23/20
+Task A
+Check how models predict outliers or other values. Does it underfit/overfit?
+Test out Different Models (look at academic papers)
+
+8/26/20
+Run models, find parameters
+Plot model predictions using said parameters.
+Test new features./
+
+Read: https://machinelearningmastery.com/cross-validation-for-imbalanced-classification/
+Perhaps for free-lunch? ^^^^
+
+Task A:
+Add in the new data
+Work in new preprocessing for categorical data
+Check how it fairs in predicting
+
+Task B:
+Think about other things to predict (classification)
+Graphical statistics for students
+Statistics about race/socioeconomics - DONE
 
 
 
+
+10/10/20
+Got most things to work. Transitioned into classification and obtaining the best
+prediction models through TPOT. There is a 88% prediction rating.
+
+Here are the things I need to do for now:
+
+ - Use binning and see how it affects the prediction models (NNs don't seem to work
+   because it never converges; most likely due to the search complexity and the lack
+   of instances) --- in progress
+ - Find the other models from the search history of TPOT, and put the best models
+   into a hyperparemeter tuner using its suggestions
+ - Look into the precision and recall matrix, test using stratified sampling; how
+   much does it affect the matrix and the percentage of correct predictions?
+ - Look into bagging and decision trees
+
+ - How would the predictions react if only the sum of absences was factored instead of individual
+   grade levels? (also for tardies)
+
+ - FUTURE: use TPOT for regression and finding the best model to predict student absences
+ - FUTURE: look into ranking the severity of students using predictions.
 
