@@ -8,6 +8,33 @@ from sklearn.preprocessing import OneHotEncoder
 pd.options.mode.chained_assignment = None  # default='warn'
 
 
+class BinningTransformer(BaseEstimator, TransformerMixin):
+
+    # set new_value to None if Pipeline contains SimpleImputer
+    # this is for absences and tardies since some students are
+    # transfer students. The placeholder in the CSV is the string "TRANSFER"
+    def __init__(self, bins=1):
+        self.bins = bins
+
+        if self.bins == 0:
+            raise ValueError("Bins cannot be set to 0")
+
+    def fit(self, x, y=None):
+        return self
+
+    """
+    Transformers all the values and converts strings and "TRANSFER" to something legitimate.
+
+    """
+    def transform(self, df):
+
+        for i in ["A", "T"]:
+            for j in column_list(i, 6, 9):
+                df[j] = df[j].apply(lambda x: int(x / self.bins))
+
+        return df
+
+
 class CustomTransformer(BaseEstimator, TransformerMixin):
 
     # set new_value to None if Pipeline contains SimpleImputer
@@ -22,9 +49,9 @@ class CustomTransformer(BaseEstimator, TransformerMixin):
         if self.bins == 0:
             raise ValueError("Bins cannot be set to 0")
 
-        if np.isnan(self.new_value) and not self.using_imputer:
-            raise Exception("If new_value is nan, then an imputer must be used. If being used, set",
-                            "using_imputer to True")
+      #  if np.isnan(self.new_value) and not self.using_imputer:
+       #     raise Exception("If new_value is nan, then an imputer must be used. If being used, set",
+        #                    "using_imputer to True")
 
     def fit(self, x, y=None):
         return self
@@ -135,3 +162,60 @@ def create_student_data(path, lower_bound: float = 0, upper_bound: float = 0.95)
                                                    ["Gender", "IEP/Specialized"])])
 
     return student_data, pre_process
+
+
+# convert strings to int type even if it's a float
+def convert_stat(x, new_value=np.nan):
+    if not isinstance(x, int):
+
+        if not isinstance(x, float) and '.' not in x:
+            return new_value if x == "TRANSFER" else int(x)
+        else:
+            return new_value if x == "TRANSFER" else int(float(x))
+
+    else:
+        return x
+
+
+def get_student_data(path):
+    dataForGraph = pd.read_csv(path)
+    dataForGraph["Transferred"] = dataForGraph["A6"].apply(lambda x: True if x == "TRANSFER" else False)
+
+    # convert absent and tardy columsn to integers
+    for i in ["A", "T"]:
+        for j in column_list(i, 6, 13):
+            dataForGraph[j] = dataForGraph[j].apply(convert_stat)
+            # check median and mean and see what happens!
+            dataForGraph[j].fillna(dataForGraph[j].median(), inplace=True)
+
+    # hronically absent at least one grade
+    dataForGraph["ChronicallyAbsent_in_HS"] = (dataForGraph["A9"] >= 18) | \
+                                              (dataForGraph["A10"] >= 18) | \
+                                              (dataForGraph["A11"] >= 18) | \
+                                              (dataForGraph["A12"] >= 18)
+
+    dataForGraph['AbsentSum'] = dataForGraph[column_list('A', 6, 13)].sum(axis=1)
+    dataForGraph['TardySum'] = dataForGraph[column_list('T', 6, 13)].sum(axis=1)
+
+    # for different time periods
+    dataForGraph['AbsencesSum_MS'] = dataForGraph[column_list('A', 6, 9)].sum(axis=1)
+    dataForGraph['AbsencesSum_HS'] = dataForGraph[column_list('A', 9, 13)].sum(axis=1)
+
+    dataForGraph['TardiesSum_MS'] = dataForGraph[column_list('T', 6, 9)].sum(axis=1)
+    dataForGraph['TardiesSum_HS'] = dataForGraph[column_list('T', 9, 13)].sum(axis=1)
+
+    # Impute the reduced lunch column
+    dataForGraph["Student on Free or Reduced Lunch"] = \
+        dataForGraph["Student on Free or Reduced Lunch"].apply(lambda x: "No" if pd.isnull(x) else x.strip())
+    print("Number of students on reduced lunch: {}".format(
+        dataForGraph[dataForGraph["Student on Free or Reduced Lunch"] == "Yes"].shape[0]))
+
+    # Impute disability column
+    dataForGraph["Has a Disability?"].fillna("No", inplace=True)
+    dataForGraph["Has_504"] = dataForGraph["Has a Disability?"].apply(lambda x: "Yes" if '504' in x else "No")
+
+    # remove_outliers(dataForGraph, dataForGraph["AbsencesSum_HS"], 0, 0.95)
+    #TODO: Check if this does anyting
+    dataForGraph.reset_index()
+
+    return dataForGraph
