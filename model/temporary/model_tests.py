@@ -27,7 +27,7 @@ from sklearn.impute import SimpleImputer
 
 
 # student_data, pre_process = ms.create_student_data("../../data/High School East Student Data - Sheet1.csv")
-def grid_search_scores(estimator, parameter_grid, X, y, cv=5, max_iter=1,
+def grid_search_scores(estimator, parameter_grid, X, y, cv=3, max_iter=500,
                        random_search=False, scoring='neg_mean_absolute_error',
                        repeated_KFold=None):
     cv_ = cv if repeated_KFold is None else repeated_KFold
@@ -51,10 +51,8 @@ def grid_search_scores(estimator, parameter_grid, X, y, cv=5, max_iter=1,
     CustomTransformer fixes the numbers and imputes TRANSFER values.
     It is not in ColumnTransformer in case I want to do Scaling.
     """
-
-
     model_pipeline = Pipeline(steps=[('number_transformer', ms.BinningTransformer()),
-                               #      ('preprocess', pre_process),
+                                     ('preprocess', pre_process),
                                      ('model', estimator)
                                      ])
 
@@ -74,7 +72,7 @@ def grid_search_scores(estimator, parameter_grid, X, y, cv=5, max_iter=1,
         grid = GridSearchCV(
             estimator=model_pipeline,
             param_grid=parameter_grid,
-            scoring=scoring,
+       #     scoring=scoring,
             cv=cv_,
             n_jobs=-1,
             refit=True
@@ -90,9 +88,9 @@ def grid_search_scores(estimator, parameter_grid, X, y, cv=5, max_iter=1,
     #
     # print("Estimator: ", grid.estimator['model'])
     # print("Number of iterations: ", max_iter)
-    # print("Scoring used: ", grid.scoring)
-    # print("Best parameters: ", grid.best_params_)
-    # print("Best/Mean score using best parameters: ", grid.best_score_)
+    print("Scoring used: ", grid.scoring)
+    print("Best parameters: ", grid.best_params_)
+    print("Best/Mean score using best parameters: ", grid.best_score_)
     # print("Variance: ", np.var(scores))
 
     return grid
@@ -121,10 +119,10 @@ class TrainTestSplitWrapper:
         pass
 
 
-#features = ["A6", "A7", "A8", "T6", "T7", "T8", "Has_504", "Student on Free or Reduced Lunch",
-  #          "IEP/Specialized"]
+features = ["A6", "A7", "A8", "T6", "T7", "T8", "Has_504", "Student on Free or Reduced Lunch",
+           "IEP/Specialized"]
 
-features = ["A6", "A7", "A8", "T6", "T7", "T8"]
+# features = ["A6", "A7", "A8", "T6", "T7", "T8"]
 
 student_data = ms.get_student_data("../../data/data.csv")
 
@@ -143,7 +141,7 @@ with data_split as splits:
     # fit to X_train so X_test has the correct number of columns
 
     print(type(X_train))
-    X_train = pd.get_dummies(X_train)
+    #X_train = pd.get_dummies(X_train)
 
     # pre_process.fit(X_train)
 
@@ -158,15 +156,16 @@ with data_split as splits:
     # [[7 1]Prepare the training data
     #  [1 7]]
     # 16
-    decision_tree_grid = dict(number_transformer__bins=range(1, 12))
-                       #       model__min_samples_leaf=[12],
-                      #        model__min_samples_split=[10],
-                     #         model__max_depth=[5])
+    decision_tree_grid = dict(number_transformer__bins=range(1,10),
+                            model__min_samples_leaf=range(1,20),
+                             model__min_samples_split=range(2,20),
+                             model__max_depth=range(1,20))
 
-    d_tree = grid_search_scores(svm.SVC(),
+    d_tree = grid_search_scores(DecisionTreeClassifier(random_state=1),
                                 decision_tree_grid,
                                 X_train,
-                                y_train)
+                                y_train,
+                                random_search=True)
 
     print("PREDICTIONS==========================")
     predictions = d_tree.predict(X_test)
@@ -175,6 +174,8 @@ with data_split as splits:
 
     print(confusion_matrix(y_test, predictions))
     print(len(y_test))
+
+
 
 """
 When grid search is performed, X_train, X_test, ..., are modified, so they must be separated.
