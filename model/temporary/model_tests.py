@@ -24,7 +24,7 @@ import model.model_setup as ms
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, train_test_split, RepeatedKFold
 from sklearn.impute import SimpleImputer
-
+from sklearn.kernel_approximation import RBFSampler
 
 # student_data, pre_process = ms.create_student_data("../../data/High School East Student Data - Sheet1.csv")
 def grid_search_scores(estimator, parameter_grid, X, y, cv=3, max_iter=500,
@@ -53,6 +53,7 @@ def grid_search_scores(estimator, parameter_grid, X, y, cv=3, max_iter=500,
     """
     model_pipeline = Pipeline(steps=[('number_transformer', ms.BinningTransformer()),
                                      ('preprocess', pre_process),
+                                     ('RBF', RBFSampler(gamma=0.2)),
                                      ('model', estimator)
                                      ])
 
@@ -143,8 +144,6 @@ with data_split as splits:
     print(type(X_train))
     #X_train = pd.get_dummies(X_train)
 
-    # pre_process.fit(X_train)
-
     #
     # X_train = pre_process.transform(X_train)
     # X_test = pre_process.transform(X_test)
@@ -156,16 +155,29 @@ with data_split as splits:
     # [[7 1]Prepare the training data
     #  [1 7]]
     # 16
-    decision_tree_grid = dict(number_transformer__bins=range(1,10),
-                            model__min_samples_leaf=range(1,20),
-                             model__min_samples_split=range(2,20),
-                             model__max_depth=range(1,20))
+    #
+    # Best
+    # parameters: {'model__criterion': 'entropy', 'model__max_depth': 3, 'model__min_samples_leaf': 1,
+    #              'model__min_samples_split': 8, 'number_transformer__bins': 5}
+    # Best / Mean
+    # score
+    # using
+    # best
+    # parameters: 0.8396825396825397
 
-    d_tree = grid_search_scores(DecisionTreeClassifier(random_state=1),
+    decision_tree_grid = dict(number_transformer__bins=range(1,8),
+                             model__min_samples_leaf=range(1,3),
+                             model__min_samples_split=range(2,9),
+                             model__max_depth=range(2,10))
+
+    d_tree = grid_search_scores(DecisionTreeClassifier(random_state=1, criterion='entropy'),
                                 decision_tree_grid,
                                 X_train,
                                 y_train,
-                                random_search=True)
+                                random_search=False)
+                                # repeated_KFold=RepeatedKFold(random_state=1,
+                                #                              n_splits=5,
+                                #                              n_repeats=3))
 
     print("PREDICTIONS==========================")
     predictions = d_tree.predict(X_test)

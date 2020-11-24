@@ -28,9 +28,12 @@ class BinningTransformer(BaseEstimator, TransformerMixin):
     """
     def transform(self, df):
 
-        for i in ["A", "T"]:
-            for j in column_list(i, 6, 9):
-                df[j] = df[j].apply(lambda x: int(x / self.bins))
+        # for i in ["A", "T"]:
+        #     for j in column_list(i, 6, 9):
+        #         df[j] = df[j].apply(lambda x: int(x / self.bins))
+
+        for j in ["A6", "A7", "A8", "T8"]:
+            df[j] = df[j].apply(lambda x: int(x / self.bins))
 
         return df
 
@@ -177,7 +180,7 @@ def convert_stat(x, new_value=np.nan):
         return x
 
 
-def get_student_data(path):
+def get_student_data(path, bin=False):
     dataForGraph = pd.read_csv(path)
     dataForGraph["Transferred"] = dataForGraph["A6"].apply(lambda x: True if x == "TRANSFER" else False)
 
@@ -214,8 +217,14 @@ def get_student_data(path):
     dataForGraph["Has a Disability?"].fillna("No", inplace=True)
     dataForGraph["Has_504"] = dataForGraph["Has a Disability?"].apply(lambda x: "Yes" if '504' in x else "No")
 
+    #BINNING
+    if bin:
+        for i in ["A", "T"]:
+            for j in column_list(i, 6, 13):
+                dataForGraph[j] = dataForGraph[j].apply(lambda x: int(x / 8))
+
     # remove_outliers(dataForGraph, dataForGraph["AbsencesSum_HS"], 0, 0.95)
     #TODO: Check if this does anyting
-    dataForGraph.reset_index()
+    #dataForGraph.reset_index()
 
     return dataForGraph
