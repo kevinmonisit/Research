@@ -54,7 +54,7 @@ def grid_search_scores(estimator, parameter_grid, X, y, cv=3, max_iter=500,
     """
     model_pipeline = Pipeline(steps=[#('number_transformer', ms.BinningTransformer()),
                                   #   ('preprocess', pre_process),
-                                     ('RBF', RBFSampler(gamma=0.2)),
+#                                     ('RBF', RBFSampler(gamma=0.2)),
                                      ('model', estimator)
                                      ])
 
@@ -109,14 +109,17 @@ class TrainTestSplitWrapper:
     def __enter__(self):
         X_ = cp.deepcopy(self.X)
         y_ = cp.deepcopy(self.y)
-        return train_test_split(X_, y_, random_state=self.random_state, test_size=self.test_size)
+        return train_test_split(X_, y_, test_size=self.test_size)
 
     def __exit__(self, *args, **kwargs):
         pass
 
 
-features = ["AbsencesSum_HS", "Has_504", "Student on Free or Reduced Lunch",
-            "IEP/Specialized"]
+absence_rates = ms.get_column_rates("A", 6, 9)
+features = ["Has_504", "A8", "Has_504", "Student on Free or Reduced Lunch", "IEP/Specialized", "ChronicallyAbsent_in_MS"]
+
+# for rate in absence_rates:
+#     features.append(rate)
 
 # features = ["A6", "A7", "A8", "T6", "T7", "T8"]
 
@@ -150,12 +153,8 @@ with data_split as splits:
                                                     "Student on Free or Reduced Lunch",
                                                     "IEP/Specialized"])])
 
-    pre_process.fit(X_train)
-    X_train = pre_process.transform(X_train)
-    X_test = pre_process.transform(X_test)
-    print(X_train)
-    print(X_train)
-    # X_train = pd.get_dummies(X_train)
+    X_train = pd.get_dummies(X_train)
+    X_test = pd.get_dummies(X_test)
 
     #
     # X_train = pre_process.transform(X_train)
@@ -179,36 +178,41 @@ with data_split as splits:
     # parameters: 0.8396825396825397
 
     decision_tree_grid = dict(#number_transformer__bins=range(1, 8),
-                              model__min_samples_leaf=[12],
-                              model__min_samples_split=[10],
-                              model__max_depth=[5])
+                              model__min_samples_leaf=range(2,13),
+                              model__min_samples_split=range(3,11),
+                              model__max_depth=range(2,7))
 
-    d_tree = Pipeline(steps=[#('RBF', RBFSampler(gamma=0.2)),
-                             ('model', DecisionTreeClassifier(max_depth=3,
-                                                              min_samples_leaf=12,
-                                                              min_samples_split=10,
-                                                              criterion='entropy'))
-                             ])
+    # d_tree = Pipeline(steps=[#('RBF', RBFSampler(gamma=0.2)),
+    #                          ('model', DecisionTreeClassifier(max_depth=3,
+    #                                                           min_samples_leaf=12,
+    #                                                           min_samples_split=10,
+    #                                                           criterion='entropy'))
+    #                          ])
 
-    d_tree.fit(X_train, y_train)
-  #   d_tree = grid_search_scores(DecisionTreeClassifier(random_state=1, criterion='entropy'),
-  #                               decision_tree_grid,
-  #                               X_train,
-  # #                              y_train,
-  # #                              random_search=False)
-  #   # repeated_KFold=RepeatedKFold(random_state=1,
-    #                              n_splits=5,
-    #                              n_repeats=3))
+    # d_tree.fit(X_train, y_train)
+    d_tree = grid_search_scores(DecisionTreeClassifier(random_state=1, criterion='entropy'),
+                                decision_tree_grid,
+                                X_train,
+                                y_train,
+                                random_search=False)
+
+     # repeated_KFold=RepeatedKFold(random_state=1,
+     #                             n_splits=5,
+     #                              n_repeats=3))
 
     print("PREDICTIONS==========================")
     predictions = d_tree.predict(X_test)
     print(predictions)
     print(y_test)
-
-    print(confusion_matrix(y_test, predictions))
+    matrix = confusion_matrix(y_test, predictions)
+    print(matrix)
+    total_incorrect = matrix[0][1] + matrix[1][0]
+    print("Percentage: ", (y_test.shape[0] - total_incorrect) / y_test.shape[0])
     print(len(y_test))
     print("=======")
-    importance = d_tree['model'].feature_importances_
+    # importance = d_tree['model'].feature_importances_
+    importance = d_tree.best_estimator_['model'].feature_importances_
+
     # summarize feature importance
     for i, v in enumerate(importance):
         print('Feature: %0d, Score: %.5f' % (i, v))

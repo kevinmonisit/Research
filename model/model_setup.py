@@ -88,6 +88,8 @@ def print_scores(score_array):
 def column_list(letter, start, end):
     return ["%s%d" % (letter, i) for i in range(start, end)]
 
+def get_column_rates(letter, start, end):
+    return ["%s%d_rate" % (letter, i) for i in range(start, end)]
 
 def remove_outliers(column, target, lower_bound: float = 0., upper_bound: float = 100.):
     non_outliers = target.between(target.quantile(lower_bound), target.quantile(upper_bound))
@@ -184,6 +186,8 @@ def get_student_data(path, bin=False):
     dataForGraph = pd.read_csv(path)
     dataForGraph["Transferred"] = dataForGraph["A6"].apply(lambda x: True if x == "TRANSFER" else False)
 
+    chronic_threshold = 16
+
     # convert absent and tardy columsn to integers
     for i in ["A", "T"]:
         for j in column_list(i, 6, 13):
@@ -192,10 +196,10 @@ def get_student_data(path, bin=False):
             dataForGraph[j].fillna(dataForGraph[j].median(), inplace=True)
 
     # hronically absent at least one grade
-    dataForGraph["ChronicallyAbsent_in_HS"] = (dataForGraph["A9"] >= 18) | \
-                                              (dataForGraph["A10"] >= 18) | \
-                                              (dataForGraph["A11"] >= 18) | \
-                                              (dataForGraph["A12"] >= 18)
+    dataForGraph["ChronicallyAbsent_in_HS"] = (dataForGraph["A9"] >= chronic_threshold) | \
+                                              (dataForGraph["A10"] >= chronic_threshold) | \
+                                              (dataForGraph["A11"] >= chronic_threshold) | \
+                                              (dataForGraph["A12"] >= chronic_threshold)
 
     dataForGraph['AbsentSum'] = dataForGraph[column_list('A', 6, 13)].sum(axis=1)
     dataForGraph['TardySum'] = dataForGraph[column_list('T', 6, 13)].sum(axis=1)
@@ -217,13 +221,22 @@ def get_student_data(path, bin=False):
     dataForGraph["Has a Disability?"].fillna("No", inplace=True)
     dataForGraph["Has_504"] = dataForGraph["Has a Disability?"].apply(lambda x: "Yes" if '504' in x else "No")
 
-    #BINNING
-    if bin:
-        for i in ["A", "T"]:
-            for j in column_list(i, 6, 13):
-                dataForGraph[j] = dataForGraph[j].apply(lambda x: int(x / 8))
+    # Calculate Absence Rates
+    for column_name in column_list("A", 6, 13):
+        dataForGraph[column_name + "_rate"] = dataForGraph[column_name] / 180
 
-    # remove_outliers(dataForGraph, dataForGraph["AbsencesSum_HS"], 0, 0.95)
+    # chronically absent at least one grade
+    dataForGraph["ChronicallyAbsent_in_MS"] = (dataForGraph["A6"] >= chronic_threshold) | \
+                                              (dataForGraph["A7"] >= chronic_threshold) | \
+                                              (dataForGraph["A8"] >= chronic_threshold)
+
+    #BINNING
+    # if bin:
+    #     for i in ["A", "T"]:
+    #         for j in column_list(i, 6, 13):
+    #             dataForGraph[j] = dataForGraph[j].apply(lambda x: int(x / 8))
+
+    #remove_outliers(dataForGraph, dataForGraph["AbsencesSum_HS"], 0, 0.95)
     #TODO: Check if this does anyting
     #dataForGraph.reset_index()
 
