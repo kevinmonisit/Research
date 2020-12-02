@@ -26,6 +26,7 @@ class BinningTransformer(BaseEstimator, TransformerMixin):
     Transformers all the values and converts strings and "TRANSFER" to something legitimate.
 
     """
+
     def transform(self, df):
 
         # for i in ["A", "T"]:
@@ -52,17 +53,18 @@ class CustomTransformer(BaseEstimator, TransformerMixin):
         if self.bins == 0:
             raise ValueError("Bins cannot be set to 0")
 
-      #  if np.isnan(self.new_value) and not self.using_imputer:
-       #     raise Exception("If new_value is nan, then an imputer must be used. If being used, set",
-        #                    "using_imputer to True")
+    #  if np.isnan(self.new_value) and not self.using_imputer:
+    #     raise Exception("If new_value is nan, then an imputer must be used. If being used, set",
+    #                    "using_imputer to True")
 
     def fit(self, x, y=None):
         return self
 
     """
     Transformers all the values and converts strings and "TRANSFER" to something legitimate.
-    
+
     """
+
     def transform(self, df):
 
         for i in column_list("A", 6, 9):
@@ -88,8 +90,10 @@ def print_scores(score_array):
 def column_list(letter, start, end):
     return ["%s%d" % (letter, i) for i in range(start, end)]
 
+
 def get_column_rates(letter, start, end):
     return ["%s%d_rate" % (letter, i) for i in range(start, end)]
+
 
 def remove_outliers(column, target, lower_bound: float = 0., upper_bound: float = 100.):
     non_outliers = target.between(target.quantile(lower_bound), target.quantile(upper_bound))
@@ -186,7 +190,7 @@ def get_student_data(path, bin=False):
     dataForGraph = pd.read_csv(path)
     dataForGraph["Transferred"] = dataForGraph["A6"].apply(lambda x: True if x == "TRANSFER" else False)
 
-    chronic_threshold = 16
+    chronic_threshold = 18
 
     # convert absent and tardy columsn to integers
     for i in ["A", "T"]:
@@ -198,8 +202,8 @@ def get_student_data(path, bin=False):
     # hronically absent at least one grade
     dataForGraph["ChronicallyAbsent_in_HS"] = (dataForGraph["A9"] >= chronic_threshold) | \
                                               (dataForGraph["A10"] >= chronic_threshold) | \
-                                              (dataForGraph["A11"] >= chronic_threshold) | \
-                                              (dataForGraph["A12"] >= chronic_threshold)
+                                              (dataForGraph["A11"] >= chronic_threshold)
+                                              # (dataForGraph["A12"] >= chronic_threshold)
 
     dataForGraph['AbsentSum'] = dataForGraph[column_list('A', 6, 13)].sum(axis=1)
     dataForGraph['TardySum'] = dataForGraph[column_list('T', 6, 13)].sum(axis=1)
@@ -222,22 +226,23 @@ def get_student_data(path, bin=False):
     dataForGraph["Has_504"] = dataForGraph["Has a Disability?"].apply(lambda x: "Yes" if '504' in x else "No")
 
     # Calculate Absence Rates
-    for column_name in column_list("A", 6, 13):
-        dataForGraph[column_name + "_rate"] = dataForGraph[column_name] / 180
+    for k in ["A", "T"]:
+        for column_name in column_list(k, 6, 13):
+            dataForGraph[column_name + "_rate"] = dataForGraph[column_name] / 180
 
     # chronically absent at least one grade
     dataForGraph["ChronicallyAbsent_in_MS"] = (dataForGraph["A6"] >= chronic_threshold) | \
                                               (dataForGraph["A7"] >= chronic_threshold) | \
                                               (dataForGraph["A8"] >= chronic_threshold)
 
-    #BINNING
-    # if bin:
-    #     for i in ["A", "T"]:
-    #         for j in column_list(i, 6, 13):
-    #             dataForGraph[j] = dataForGraph[j].apply(lambda x: int(x / 8))
+    # BINNING
+    if bin:
+        for i in ["A", "T"]:
+            for j in column_list(i, 6, 13):
+                dataForGraph[j] = dataForGraph[j].apply(lambda x: int(x / 8))
 
-    #remove_outliers(dataForGraph, dataForGraph["AbsencesSum_HS"], 0, 0.95)
-    #TODO: Check if this does anyting
-    #dataForGraph.reset_index()
+    # remove_outliers(dataForGraph, dataForGraph["AbsencesSum_HS"], 0, 0.95)
+    # TODO: Check if this does anyting
+    # dataForGraph.reset_index()
 
     return dataForGraph

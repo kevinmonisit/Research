@@ -11,8 +11,9 @@ https://machinelearningmastery.com/k-fold-cross-validation/
 import numpy as np
 import pandas as pd
 import copy as cp
+from xgboost import XGBClassifier
 from sklearn.metrics import confusion_matrix
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.metrics import mean_absolute_error
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LinearRegression, Ridge, ElasticNet
@@ -25,6 +26,11 @@ from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, train_test_split, RepeatedKFold
 from sklearn.impute import SimpleImputer
 from sklearn.kernel_approximation import RBFSampler
+
+from sklearn.model_selection import LeaveOneOut
+from sklearn.model_selection import  cross_val_score
+from numpy import mean
+from numpy import std
 
 
 # student_data, pre_process = ms.create_student_data("../../data/High School East Student Data - Sheet1.csv")
@@ -52,12 +58,13 @@ def grid_search_scores(estimator, parameter_grid, X, y, cv=3, max_iter=500,
     CustomTransformer fixes the numbers and imputes TRANSFER values.
     It is not in ColumnTransformer in case I want to do Scaling.
     """
-    model_pipeline = Pipeline(steps=[#('number_transformer', ms.BinningTransformer()),
-                                  #   ('preprocess', pre_process),
-#                                     ('RBF', RBFSampler(gamma=0.2)),
-                                     ('model', estimator)
-                                     ])
+    model_pipeline = Pipeline(steps=[  # ('number_transformer', ms.BinningTransformer()),
+        #   ('preprocess', pre_process),
+        #                                     ('RBF', RBFSampler(gamma=0.2)),
+        ('model', estimator)
+    ])
 
+    cv_ = LeaveOneOut()
     grid = None
     if random_search:
         grid = RandomizedSearchCV(
@@ -74,10 +81,10 @@ def grid_search_scores(estimator, parameter_grid, X, y, cv=3, max_iter=500,
         grid = GridSearchCV(
             estimator=model_pipeline,
             param_grid=parameter_grid,
-            #     scoring=scoring,
-            cv=cv_,
+            scoring='recall',
+            cv=10,
             n_jobs=-1,
-            refit=True
+            refit=True,
         )
 
     grid.fit(X, y)
@@ -109,21 +116,23 @@ class TrainTestSplitWrapper:
     def __enter__(self):
         X_ = cp.deepcopy(self.X)
         y_ = cp.deepcopy(self.y)
-        return train_test_split(X_, y_, test_size=self.test_size)
+        return train_test_split(X_, y_, random_state=self.random_state, test_size=self.test_size)
 
     def __exit__(self, *args, **kwargs):
         pass
 
 
-absence_rates = ms.get_column_rates("A", 6, 9)
-features = ["Has_504", "A8", "Has_504", "Student on Free or Reduced Lunch", "IEP/Specialized", "ChronicallyAbsent_in_MS"]
-
-# for rate in absence_rates:
-#     features.append(rate)
-
+absence_rates = []
+# features = ["Has_504", "A8", "Has_504", "Student on Free or Reduced Lunch", "IEP/Specialized", "ChronicallyAbsent_in_MS"]
+# features = ["Student on Free or Reduced Lunch", "Has_504", "IEP/Specialized"]
+#
+# for letter in ["A", "T"]:
+#         for rates in ms.get_column_rates(letter, 6, 10):
+#             features.append(rates)
+features = ["A8", "Has_504", "Student on Free or Reduced Lunch", "IEP/Specialized"]
 # features = ["A6", "A7", "A8", "T6", "T7", "T8"]
 
-student_data = ms.get_student_data("../../data/data.csv", bin=True)
+student_data = ms.get_student_data("../../data/data.csv", bin=False)
 
 data_split = TrainTestSplitWrapper(student_data[features],
                                    student_data['ChronicallyAbsent_in_HS'],
@@ -135,9 +144,57 @@ from sklearn.metrics import average_precision_score
 from sklearn import svm
 from sklearn.linear_model import LogisticRegression
 
+
 def column_list(letter, start, end):
     return ["%s%d" % (letter, i) for i in range(start, end)]
 
+
+def create_decision_tree(X_train, y_train):
+    decision_tree_grid = dict(  # number_transformer__bins=range(1, 8),
+        model__min_samples_leaf=range(2, 13),
+        model__min_samples_split=range(3, 11),
+        model__max_depth=range(2, 3))
+
+    return grid_search_scores(DecisionTreeClassifier(criterion='entropy'),
+                              decision_tree_grid,
+                              X_train,
+                              y_train,
+                              random_search=False)
+
+def create_random_forest(X_train, y_train):
+    return grid_search_scores(RandomForestClassifier(),
+                              dict(),
+                              X_train,
+                              y_train,
+                              random_search=False)
+
+
+def create_logisitc_regression(X_train, y_train):
+    logistic_regression = dict()  # number_transformer__bins=range(1, 8),
+        # model__min_samples_leaf=range(2, 13),
+        # model__min_samples_split=range(3, 11),
+        # model__max_depth=range(2, 3))
+
+    return grid_search_scores(LogisticRegression(),
+                              logistic_regression,
+                              X_train,
+                              y_train,
+                              random_search=False)
+
+
+def create_xgboost(X_train, y_train):
+    xgboost_grid = dict(  # number_transformer__bins=range(1, 8),
+        model__max_depth=[2, 6],
+        model__gamma=[2],
+        model__eta=[0.8],
+        model__reg_alpha=[0.5],
+        model__reg_lambda=[0.5])
+
+    return grid_search_scores(XGBClassifier(criterion='entropy'),
+                              xgboost_grid,
+                              X_train,
+                              y_train,
+                              random_search=False)
 
 
 with data_split as splits:
@@ -177,11 +234,6 @@ with data_split as splits:
     # best
     # parameters: 0.8396825396825397
 
-    decision_tree_grid = dict(#number_transformer__bins=range(1, 8),
-                              model__min_samples_leaf=range(2,13),
-                              model__min_samples_split=range(3,11),
-                              model__max_depth=range(2,7))
-
     # d_tree = Pipeline(steps=[#('RBF', RBFSampler(gamma=0.2)),
     #                          ('model', DecisionTreeClassifier(max_depth=3,
     #                                                           min_samples_leaf=12,
@@ -189,30 +241,64 @@ with data_split as splits:
     #                                                           criterion='entropy'))
     #                          ])
 
-    # d_tree.fit(X_train, y_train)
-    d_tree = grid_search_scores(DecisionTreeClassifier(random_state=1, criterion='entropy'),
-                                decision_tree_grid,
-                                X_train,
-                                y_train,
-                                random_search=False)
+    #model_pipeline =  create_decision_tree(X_train, y_train)
+    model_pipeline = create_random_forest(X_train, y_train)
+   #  model_pipeline = create_xgboost(X_train, y_train)
+    #model_pipeline = create_logisitc_regression(X_train, y_train)
 
-     # repeated_KFold=RepeatedKFold(random_state=1,
-     #                             n_splits=5,
-     #                              n_repeats=3))
+    # model_pipeline = RandomForestClassifier()
+    model_pipeline.fit(X_train, y_train)
+    # model_pipeline = None
+    # repeated_KFold=RepeatedKFold(random_state=1,
+    #                             n_splits=5,
+    #                              n_repeats=3))
+    if model_pipeline is not None:
+        print("PREDICTIONS==========================")
+        predictions = model_pipeline.predict(X_test)
+        print(predictions)
+        print(y_test)
+        matrix = confusion_matrix(y_test, predictions)
+        print(matrix)
+        total_incorrect = matrix[0][1] + matrix[1][0]
+        print("Percentage: ", (y_test.shape[0] - total_incorrect) / y_test.shape[0])
+        print(len(y_test))
+        print("=======")
+        # importance = d_tree['model'].feature_importances_
+        importance = model_pipeline.best_estimator_['model'].feature_importances_
+     #   importance = model_pipeline.feature_importances_
+        # summarize feature importance
+        for i, v in enumerate(importance):
+            print('Feature: %0d, Score: %.5f' % (i, v))
+
+
+with data_split as splits:
+    X_train, X_test, y_train, y_test = splits
+
+    X_train = pd.get_dummies(X_train)
+    y_tain = pd.get_dummies(y_train)
+
+    # Implementation of LOOCV
+    # X, y = student_data[features], student_data["ChronicallyAbsent_in_HS"]
+    #
+    # X = pd.get_dummies(student_data[features])
+
+    cv = LeaveOneOut()
+    model = RandomForestClassifier()
+
+    scores = cross_val_score(model, X_train, y_train, scoring='accuracy', cv=cv, n_jobs=-1)
+    print(type(scores))
+    print(scores)
+    # report performance
+    print('Accuracy: %.3f (%.3f)' % (mean(scores), std(scores)))
 
     print("PREDICTIONS==========================")
-    predictions = d_tree.predict(X_test)
+    predictions = model.predict(X_test)
     print(predictions)
     print(y_test)
     matrix = confusion_matrix(y_test, predictions)
     print(matrix)
-    total_incorrect = matrix[0][1] + matrix[1][0]
-    print("Percentage: ", (y_test.shape[0] - total_incorrect) / y_test.shape[0])
-    print(len(y_test))
-    print("=======")
-    # importance = d_tree['model'].feature_importances_
-    importance = d_tree.best_estimator_['model'].feature_importances_
 
-    # summarize feature importance
-    for i, v in enumerate(importance):
-        print('Feature: %0d, Score: %.5f' % (i, v))
+    print(np.mean([0,1]))
+
+
+
