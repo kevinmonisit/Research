@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import copy as cp
 from xgboost import XGBClassifier
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, roc_auc_score
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.metrics import mean_absolute_error
 from sklearn.pipeline import Pipeline
@@ -26,6 +26,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, train_test_split, RepeatedKFold
 from sklearn.impute import SimpleImputer
 from sklearn.kernel_approximation import RBFSampler
+from sklearn.metrics import roc_curve
 
 from sklearn.model_selection import LeaveOneOut
 from sklearn.model_selection import  cross_val_score
@@ -82,7 +83,7 @@ def grid_search_scores(estimator, parameter_grid, X, y, cv=3, max_iter=500,
             estimator=model_pipeline,
             param_grid=parameter_grid,
             scoring='recall',
-            cv=10,
+            cv=5, #was 5 before
             n_jobs=-1,
             refit=True,
         )
@@ -130,13 +131,13 @@ absence_rates = []
 #         for rates in ms.get_column_rates(letter, 6, 10):
 #             features.append(rates)
 features = ["A8", "Has_504", "Student on Free or Reduced Lunch", "IEP/Specialized"]
-# features = ["A6", "A7", "A8", "T6", "T7", "T8"]
+# 8th grade AUC SCORE: AUC: 0.906
 
 student_data = ms.get_student_data("../../data/data.csv", bin=False)
 
 data_split = TrainTestSplitWrapper(student_data[features],
                                    student_data['ChronicallyAbsent_in_HS'],
-                                   test_size=0.2, random_state=1)
+                                   test_size=0.3, random_state=1)
 
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import confusion_matrix
@@ -162,7 +163,7 @@ def create_decision_tree(X_train, y_train):
                               random_search=False)
 
 def create_random_forest(X_train, y_train):
-    return grid_search_scores(RandomForestClassifier(),
+    return grid_search_scores(RandomForestClassifier(random_state=1),
                               dict(),
                               X_train,
                               y_train,
@@ -190,12 +191,13 @@ def create_xgboost(X_train, y_train):
         model__reg_alpha=[0.5],
         model__reg_lambda=[0.5])
 
-    return grid_search_scores(XGBClassifier(criterion='entropy'),
+    return grid_search_scores(XGBClassifier(),
                               xgboost_grid,
                               X_train,
                               y_train,
                               random_search=False)
 
+import matplotlib.pyplot as plt
 
 with data_split as splits:
     X_train, X_test, y_train, y_test = splits
@@ -257,12 +259,19 @@ with data_split as splits:
         predictions = model_pipeline.predict(X_test)
         print(predictions)
         print(y_test)
+
+        print("Y_TEST VALUE COUNTS: ")
+        print(y_test.value_counts())
+        print("Y_TRAIN VALUE COUNTS: ")
+        print(y_train.value_counts())
+
         matrix = confusion_matrix(y_test, predictions)
         print(matrix)
         total_incorrect = matrix[0][1] + matrix[1][0]
         print("Percentage: ", (y_test.shape[0] - total_incorrect) / y_test.shape[0])
         print(len(y_test))
-        print("=======")
+
+        print("======= FEATURE IMPORTANCE =======")
         # importance = d_tree['model'].feature_importances_
         importance = model_pipeline.best_estimator_['model'].feature_importances_
      #   importance = model_pipeline.feature_importances_
@@ -270,7 +279,26 @@ with data_split as splits:
         for i, v in enumerate(importance):
             print('Feature: %0d, Score: %.5f' % (i, v))
 
+        y_pred_prob = model_pipeline.best_estimator_['model'].predict_proba(X_test)[:, 1]
+        for proba in y_pred_prob:
+            print(proba, end=', ')
 
+        # Generate ROC curve values: fpr, tpr, thresholds
+        fpr, tpr, thresholds = roc_curve(y_test, y_pred_prob)
+        auc = roc_auc_score(y_test, y_pred_prob)
+        print("AUC: %.3f" % auc)
+
+        # Plot ROC curve
+        plt.plot([0, 1], [0, 1], 'k--')
+        plt.plot(fpr, tpr)
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('ROC Curve')
+        plt.show()
+
+
+
+'''
 with data_split as splits:
     X_train, X_test, y_train, y_test = splits
 
@@ -285,7 +313,7 @@ with data_split as splits:
     cv = LeaveOneOut()
     model = RandomForestClassifier()
 
-    scores = cross_val_score(model, X_train, y_train, scoring='accuracy', cv=cv, n_jobs=-1)
+    scores = cross_val_score(model, X_train, y_train, scoring='recall', cv=10, n_jobs=-1)
     print(type(scores))
     print(scores)
     # report performance
@@ -300,5 +328,5 @@ with data_split as splits:
 
     print(np.mean([0,1]))
 
-
+'''
 

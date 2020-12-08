@@ -202,8 +202,8 @@ def get_student_data(path, bin=False):
     # hronically absent at least one grade
     dataForGraph["ChronicallyAbsent_in_HS"] = (dataForGraph["A9"] >= chronic_threshold) | \
                                               (dataForGraph["A10"] >= chronic_threshold) | \
-                                              (dataForGraph["A11"] >= chronic_threshold)
-                                              # (dataForGraph["A12"] >= chronic_threshold)
+                                              (dataForGraph["A11"] >= chronic_threshold) | \
+                                              (dataForGraph["A12"] >= chronic_threshold)
 
     dataForGraph['AbsentSum'] = dataForGraph[column_list('A', 6, 13)].sum(axis=1)
     dataForGraph['TardySum'] = dataForGraph[column_list('T', 6, 13)].sum(axis=1)
@@ -243,6 +243,6 @@ def get_student_data(path, bin=False):
 
     # remove_outliers(dataForGraph, dataForGraph["AbsencesSum_HS"], 0, 0.95)
     # TODO: Check if this does anyting
-    # dataForGraph.reset_index()
+    #dataForGraph.reset_index()
 
     return dataForGraph
