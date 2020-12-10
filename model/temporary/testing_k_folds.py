@@ -199,71 +199,27 @@ def create_xgboost(X_train, y_train):
 
 import matplotlib.pyplot as plt
 
-with data_split as splits:
-    X_train, X_test, y_train, y_test = splits
-    # fit to X_train so X_test has the correct number of columns
+def get_model_pipeline():
+    with data_split as splits:
+        X_train, X_test, y_train, y_test = splits
+        # fit to X_train so X_test has the correct number of columns
 
-    print(type(X_train))
+        print(type(X_train))
 
-    pre_process = ColumnTransformer(remainder='passthrough',
-                                    transformers=[('categories',
-                                                   OneHotEncoder(handle_unknown="error"),
-                                                   ["Has_504",
-                                                    "Student on Free or Reduced Lunch",
-                                                    "IEP/Specialized"])])
+        pre_process = ColumnTransformer(remainder='passthrough',
+                                        transformers=[('categories',
+                                                       OneHotEncoder(handle_unknown="error"),
+                                                       ["Has_504",
+                                                        "Student on Free or Reduced Lunch",
+                                                        "IEP/Specialized"])])
 
-    X_train = pd.get_dummies(X_train)
-    X_test = pd.get_dummies(X_test)
+        X_train = pd.get_dummies(X_train)
+        X_test = pd.get_dummies(X_test)
 
-    #
-    # X_train = pre_process.transform(X_train)
-    # X_test = pre_process.transform(X_test)
+        model_pipeline = create_random_forest(X_train, y_train)
+        model_pipeline.fit(X_train, y_train)
 
-    # \Best
-    # pipeline: DecisionTreeClassifier(RBFSampler(input_matrix, gamma=0.2), criterion=entropy, max_depth=5,
-    #                                  min_samples_leaf=12, min_samples_split=10)
-    # 512.8246681690216
-    # [[7 1]Prepare the training data
-    #  [1 7]]
-    # 16
-    #
-    # Best
-    # parameters: {'model__criterion': 'entropy', 'model__max_depth': 3, 'model__min_samples_leaf': 1,
-    #              'model__min_samples_split': 8, 'number_transformer__bins': 5}
-    # Best / Mean
-    # score
-    # using
-    # best
-    # parameters: 0.8396825396825397
-
-    # d_tree = Pipeline(steps=[#('RBF', RBFSampler(gamma=0.2)),
-    #                          ('model', DecisionTreeClassifier(max_depth=3,
-    #                                                           min_samples_leaf=12,
-    #                                                           min_samples_split=10,
-    #                                                           criterion='entropy'))
-    #                          ])
-
-    #model_pipeline =  create_decision_tree(X_train, y_train)
-    model_pipeline = create_random_forest(X_train, y_train)
-   #  model_pipeline = create_xgboost(X_train, y_train)
-    #model_pipeline = create_logisitc_regression(X_train, y_train)
-
-    # model_pipeline = RandomForestClassifier()
-    model_pipeline.fit(X_train, y_train)
-    # model_pipeline = None
-    # repeated_KFold=RepeatedKFold(random_state=1,
-    #                             n_splits=5,
-    #                              n_repeats=3))
-    if model_pipeline is not None:
-        print("PREDICTIONS==========================")
         predictions = model_pipeline.predict(X_test)
-        print(predictions)
-        print(y_test)
-
-        print("Y_TEST VALUE COUNTS: ")
-        print(y_test.value_counts())
-        print("Y_TRAIN VALUE COUNTS: ")
-        print(y_train.value_counts())
 
         matrix = confusion_matrix(y_test, predictions)
         print(matrix)
@@ -271,31 +227,128 @@ with data_split as splits:
         print("Percentage: ", (y_test.shape[0] - total_incorrect) / y_test.shape[0])
         print(len(y_test))
 
-        print("======= FEATURE IMPORTANCE =======")
-        # importance = d_tree['model'].feature_importances_
-        importance = model_pipeline.best_estimator_['model'].feature_importances_
-     #   importance = model_pipeline.feature_importances_
-        # summarize feature importance
-        for i, v in enumerate(importance):
-            print('Feature: %0d, Score: %.5f' % (i, v))
+        return model_pipeline, X_test, y_test
 
-        y_pred_prob = model_pipeline.best_estimator_['model'].predict_proba(X_test)[:, 1]
-        for proba in y_pred_prob:
-            print(proba, end=', ')
 
-        # Generate ROC curve values: fpr, tpr, thresholds
-        fpr, tpr, thresholds = roc_curve(y_test, y_pred_prob)
-        auc = roc_auc_score(y_test, y_pred_prob)
-        print("AUC: %.3f" % auc)
 
-        # Plot ROC curve
-        plt.plot([0, 1], [0, 1], 'k--')
-        plt.plot(fpr, tpr)
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
-        plt.title('ROC Curve')
-        plt.show()
+def run_the_models():
 
+    # these are to be returned to be used in jupyter notebook
+    # the with statement leads to temporary variables (i think?)
+    y_test_ = None
+    model_predictions_ = None
+    model_pred_probas = None
+
+    pipeline_model_ = None
+
+    with data_split as splits:
+        X_train, X_test, y_train, y_test = splits
+        # fit to X_train so X_test has the correct number of columns
+
+        print(type(X_train))
+
+        pre_process = ColumnTransformer(remainder='passthrough',
+                                        transformers=[('categories',
+                                                       OneHotEncoder(handle_unknown="error"),
+                                                       ["Has_504",
+                                                        "Student on Free or Reduced Lunch",
+                                                        "IEP/Specialized"])])
+
+        X_train = pd.get_dummies(X_train)
+        X_test = pd.get_dummies(X_test)
+
+        #
+        # X_train = pre_process.transform(X_train)
+        # X_test = pre_process.transform(X_test)
+
+        # \Best
+        # pipeline: DecisionTreeClassifier(RBFSampler(input_matrix, gamma=0.2), criterion=entropy, max_depth=5,
+        #                                  min_samples_leaf=12, min_samples_split=10)
+        # 512.8246681690216
+        # [[7 1]Prepare the training data
+        #  [1 7]]
+        # 16
+        #
+        # Best
+        # parameters: {'model__criterion': 'entropy', 'model__max_depth': 3, 'model__min_samples_leaf': 1,
+        #              'model__min_samples_split': 8, 'number_transformer__bins': 5}
+        # Best / Mean
+        # score
+        # using
+        # best
+        # parameters: 0.8396825396825397
+
+        # d_tree = Pipeline(steps=[#('RBF', RBFSampler(gamma=0.2)),
+        #                          ('model', DecisionTreeClassifier(max_depth=3,
+        #                                                           min_samples_leaf=12,
+        #                                                           min_samples_split=10,
+        #                                                           criterion='entropy'))
+        #                          ])
+
+        # model_pipeline =  create_decision_tree(X_train, y_train)
+        model_pipeline = create_random_forest(X_train, y_train)
+        #  model_pipeline = create_xgboost(X_train, y_train)
+        # model_pipeline = create_logisitc_regression(X_train, y_train)
+
+        # model_pipeline = RandomForestClassifier()
+        model_pipeline.fit(X_train, y_train)
+        # model_pipeline = None
+        # repeated_KFold=RepeatedKFold(random_state=1,
+        #                             n_splits=5,
+        #                              n_repeats=3))
+        if model_pipeline is not None:
+            print("PREDICTIONS==========================")
+            predictions = model_pipeline.predict(X_test)
+            print(predictions)
+            print(y_test)
+
+            # find those who are chronically
+
+            print("Y_TEST VALUE COUNTS: ")
+            print(y_test.value_counts())
+            print("Y_TRAIN VALUE COUNTS: ")
+            print(y_train.value_counts())
+
+            matrix = confusion_matrix(y_test, predictions)
+            print(matrix)
+            total_incorrect = matrix[0][1] + matrix[1][0]
+            print("Percentage: ", (y_test.shape[0] - total_incorrect) / y_test.shape[0])
+            print(len(y_test))
+
+            print("======= FEATURE IMPORTANCE =======")
+            # importance = d_tree['model'].feature_importances_
+            importance = model_pipeline.best_estimator_['model'].feature_importances_
+            #   importance = model_pipeline.feature_importances_
+            # summarize feature importance
+            for i, v in enumerate(importance):
+                print('Feature: %0d, Score: %.5f' % (i, v))
+            print("TYPE: ")
+            y_pred_prob = model_pipeline.best_estimator_['model'].predict_proba(X_test)[:, 1]
+            print("TYPE: ")
+            print(type(model_pipeline.best_estimator_['model'].predict_proba(X_test)))
+            for proba in y_pred_prob:
+                print(proba, end=', ')
+
+            # Generate ROC curve values: fpr, tpr, thresholds
+            fpr, tpr, thresholds = roc_curve(y_test, y_pred_prob)
+            auc = roc_auc_score(y_test, y_pred_prob)
+            print("\nAUC: %.3f" % auc, end='\n')
+
+            # Plot ROC curve
+            plt.plot([0, 1], [0, 1], 'k--')
+            plt.plot(fpr, tpr)
+            plt.xlabel('False Positive Rate')
+            plt.ylabel('True Positive Rate')
+            plt.title('ROC Curve')
+            plt.show()
+
+            # SETTING THE RETURN VALUES
+            y_test_ = y_test
+            model_predictions_ = predictions
+            model_pred_probas_ = y_pred_prob
+
+    return y_test_, model_predictions_, model_pred_probas_, \
+           model_pipeline, X_test
 
 
 '''
