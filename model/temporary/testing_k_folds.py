@@ -286,7 +286,7 @@ def run_the_models():
         #                          ])
 
         # model_pipeline =  create_decision_tree(X_train, y_train)
-        model_pipeline = create_random_forest(X_train, y_train)
+        model_pipeline = create_xgboost(X_train, y_train)
         #  model_pipeline = create_xgboost(X_train, y_train)
         # model_pipeline = create_logisitc_regression(X_train, y_train)
 
