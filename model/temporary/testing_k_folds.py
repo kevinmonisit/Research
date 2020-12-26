@@ -13,7 +13,7 @@ import pandas as pd
 import copy as cp
 from xgboost import XGBClassifier
 from sklearn.metrics import confusion_matrix, roc_auc_score
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, AdaBoostClassifier
 from sklearn.metrics import mean_absolute_error
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LinearRegression, Ridge, ElasticNet
@@ -27,6 +27,13 @@ from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, train_test
 from sklearn.impute import SimpleImputer
 from sklearn.kernel_approximation import RBFSampler
 from sklearn.metrics import roc_curve
+
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import average_precision_score
+from sklearn import svm
+from sklearn.linear_model import LogisticRegression
+
 
 from sklearn.model_selection import LeaveOneOut
 from sklearn.model_selection import  cross_val_score
@@ -74,7 +81,8 @@ def grid_search_scores(estimator, parameter_grid, X, y, cv=3, max_iter=500,
             estimator=model_pipeline,
             param_distributions=parameter_grid,
             #     scoring=scoring,
-            cv=cv_,
+            scoring='recall',
+            cv=5,
             n_jobs=-1,
             refit=True
         )
@@ -130,25 +138,12 @@ absence_rates = []
 # for letter in ["A", "T"]:
 #         for rates in ms.get_column_rates(letter, 6, 10):
 #             features.append(rates)
-features = ["A8", "Has_504", "Student on Free or Reduced Lunch", "IEP/Specialized"]
+features = ["A8", "A7", "A6", "Gender", "Has_504", "Student on Free or Reduced Lunch", "IEP/Specialized"]
 # 8th grade AUC SCORE: AUC: 0.906
-
-student_data = ms.get_student_data("../../data/data.csv", bin=False)
-
-data_split = TrainTestSplitWrapper(student_data[features],
-                                   student_data['ChronicallyAbsent_in_HS'],
-                                   test_size=0.3, random_state=1)
-
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import average_precision_score
-from sklearn import svm
-from sklearn.linear_model import LogisticRegression
 
 
 def column_list(letter, start, end):
     return ["%s%d" % (letter, i) for i in range(start, end)]
-
 
 def create_decision_tree(X_train, y_train):
     decision_tree_grid = dict(  # number_transformer__bins=range(1, 8),
@@ -162,8 +157,21 @@ def create_decision_tree(X_train, y_train):
                               y_train,
                               random_search=False)
 
-def create_random_forest(X_train, y_train):
-    return grid_search_scores(RandomForestClassifier(random_state=1),
+def create_random_forest(X_train, y_train, random_search=False):
+    # parameters = dict(model__max_features=['auto', 'sqrt', 'log2'],
+    #                   model__n_estimators=[100, 200],
+    #                   model__min_samples_leaf=range(1,12),
+    #                   model__min_samples_split=range(2,15))
+
+    return grid_search_scores(RandomForestClassifier(n_estimators=350,random_state=1),
+                              dict(),
+                              X_train,
+                              y_train,
+                              random_search=random_search)
+
+
+def create_ada_boost(X_train, y_train):
+    return grid_search_scores(AdaBoostClassifier(random_state=1),
                               dict(),
                               X_train,
                               y_train,
@@ -197,9 +205,17 @@ def create_xgboost(X_train, y_train):
                               y_train,
                               random_search=False)
 
+
 import matplotlib.pyplot as plt
 
-def get_model_pipeline():
+
+def get_model_pipeline(directory="../../data/data.csv"):
+    student_data = ms.get_student_data(directory, bin=False)
+
+    data_split = TrainTestSplitWrapper(student_data[features],
+                                       student_data['ChronicallyAbsent_in_HS'],
+                                       test_size=0.2, random_state=1)
+
     with data_split as splits:
         X_train, X_test, y_train, y_test = splits
         # fit to X_train so X_test has the correct number of columns
@@ -232,6 +248,11 @@ def get_model_pipeline():
 
 
 def run_the_models():
+    student_data = ms.get_student_data("../../data/data.csv", bin=False)
+
+    data_split = TrainTestSplitWrapper(student_data[features],
+                                       student_data['ChronicallyAbsent_in_HS'],
+                                       test_size=0.2, random_state=1)
 
     # these are to be returned to be used in jupyter notebook
     # the with statement leads to temporary variables (i think?)
@@ -257,36 +278,8 @@ def run_the_models():
         X_train = pd.get_dummies(X_train)
         X_test = pd.get_dummies(X_test)
 
-        #
-        # X_train = pre_process.transform(X_train)
-        # X_test = pre_process.transform(X_test)
-
-        # \Best
-        # pipeline: DecisionTreeClassifier(RBFSampler(input_matrix, gamma=0.2), criterion=entropy, max_depth=5,
-        #                                  min_samples_leaf=12, min_samples_split=10)
-        # 512.8246681690216
-        # [[7 1]Prepare the training data
-        #  [1 7]]
-        # 16
-        #
-        # Best
-        # parameters: {'model__criterion': 'entropy', 'model__max_depth': 3, 'model__min_samples_leaf': 1,
-        #              'model__min_samples_split': 8, 'number_transformer__bins': 5}
-        # Best / Mean
-        # score
-        # using
-        # best
-        # parameters: 0.8396825396825397
-
-        # d_tree = Pipeline(steps=[#('RBF', RBFSampler(gamma=0.2)),
-        #                          ('model', DecisionTreeClassifier(max_depth=3,
-        #                                                           min_samples_leaf=12,
-        #                                                           min_samples_split=10,
-        #                                                           criterion='entropy'))
-        #                          ])
-
         # model_pipeline =  create_decision_tree(X_train, y_train)
-        model_pipeline = create_xgboost(X_train, y_train)
+        model_pipeline = create_random_forest(X_train, y_train, True)
         #  model_pipeline = create_xgboost(X_train, y_train)
         # model_pipeline = create_logisitc_regression(X_train, y_train)
 
@@ -349,6 +342,36 @@ def run_the_models():
 
     return y_test_, model_predictions_, model_pred_probas_, \
            model_pipeline, X_test
+
+
+run_the_models()
+#
+# X_train = pre_process.transform(X_train)
+# X_test = pre_process.transform(X_test)
+
+# \Best
+# pipeline: DecisionTreeClassifier(RBFSampler(input_matrix, gamma=0.2), criterion=entropy, max_depth=5,
+#                                  min_samples_leaf=12, min_samples_split=10)
+# 512.8246681690216
+# [[7 1]Prepare the training data
+#  [1 7]]
+# 16
+#
+# Best
+# parameters: {'model__criterion': 'entropy', 'model__max_depth': 3, 'model__min_samples_leaf': 1,
+#              'model__min_samples_split': 8, 'number_transformer__bins': 5}
+# Best / Mean
+# score
+# using
+# best
+# parameters: 0.8396825396825397
+
+# d_tree = Pipeline(steps=[#('RBF', RBFSampler(gamma=0.2)),
+#                          ('model', DecisionTreeClassifier(max_depth=3,
+#                                                           min_samples_leaf=12,
+#                                                           min_samples_split=10,
+#                                                           criterion='entropy'))
+#                          ])
 
 
 '''
