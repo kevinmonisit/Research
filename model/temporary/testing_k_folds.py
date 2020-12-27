@@ -41,7 +41,6 @@ from numpy import mean
 from numpy import std
 
 
-# student_data, pre_process = ms.create_student_data("../../data/High School East Student Data - Sheet1.csv")
 def grid_search_scores(estimator, parameter_grid, X, y, cv=3, max_iter=500,
                        random_search=False, scoring='neg_mean_absolute_error',
                        repeated_KFold=None):
@@ -112,6 +111,7 @@ def grid_search_scores(estimator, parameter_grid, X, y, cv=3, max_iter=500,
     # print("Variance: ", np.var(scores))
 
     return grid
+# student_data, pre_process = ms.create_student_data("../../data/High School East Student Data - Sheet1.csv")
 
 
 class TrainTestSplitWrapper:
@@ -123,6 +123,14 @@ class TrainTestSplitWrapper:
         self.test_size = test_size
 
     def __enter__(self):
+        """
+        When doing train test split or using scikit-learn with train test splits,
+        there are in place modifications to X and y for some reason. This can be a problem
+        when running multiple models successively on the same test splits.
+        This can be remedied with deep copies of X and y.
+
+        :return: the test split
+        """
         X_ = cp.deepcopy(self.X)
         y_ = cp.deepcopy(self.y)
         return train_test_split(X_, y_, random_state=self.random_state, test_size=self.test_size)
@@ -208,7 +216,7 @@ def create_xgboost(X_train, y_train):
 
 import matplotlib.pyplot as plt
 
-
+# used by jupyter notebook
 def get_model_pipeline(directory="../../data/data.csv"):
     student_data = ms.get_student_data(directory, bin=False)
 
@@ -344,7 +352,7 @@ def run_the_models():
            model_pipeline, X_test
 
 
-run_the_models()
+#run_the_models()
 #
 # X_train = pre_process.transform(X_train)
 # X_test = pre_process.transform(X_test)
