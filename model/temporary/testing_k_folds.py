@@ -146,7 +146,7 @@ absence_rates = []
 # for letter in ["A", "T"]:
 #         for rates in ms.get_column_rates(letter, 6, 10):
 #             features.append(rates)
-features = ["A8", "A7", "A6", "Gender", "Has_504", "Student on Free or Reduced Lunch", "IEP/Specialized"]
+features = ["A8", "Has_504", "Student on Free or Reduced Lunch", "IEP/Specialized"]
 # 8th grade AUC SCORE: AUC: 0.906
 
 
@@ -171,11 +171,11 @@ def create_random_forest(X_train, y_train, random_search=False):
     #                   model__min_samples_leaf=range(1,12),
     #                   model__min_samples_split=range(2,15))
 
-    return grid_search_scores(RandomForestClassifier(n_estimators=350,random_state=1),
+    return grid_search_scores(RandomForestClassifier(n_estimators=350, random_state=1),
                               dict(),
                               X_train,
                               y_train,
-                              random_search=random_search)
+                              random_search=False)
 
 
 def create_ada_boost(X_train, y_train):
@@ -341,7 +341,7 @@ def run_the_models():
             plt.xlabel('False Positive Rate')
             plt.ylabel('True Positive Rate')
             plt.title('ROC Curve')
-            plt.show()
+#            plt.show()
 
             # SETTING THE RETURN VALUES
             y_test_ = y_test
@@ -351,6 +351,8 @@ def run_the_models():
     return y_test_, model_predictions_, model_pred_probas_, \
            model_pipeline, X_test
 
+
+#run_the_models()
 
 #run_the_models()
 #
