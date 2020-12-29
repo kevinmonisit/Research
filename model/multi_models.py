@@ -26,7 +26,8 @@ class ModelWrapper:
                  cv=5):
         self.model_name = model.__class__.__name__
 
-        # model will soon become a grid search object, so get the model_name while you can
+        # model will soon become a grid search object,
+        # so get the model_name while you can
         self.model = model
         self.parameters = parameters
         self.train_test_wrapper = train_test_wrapper
@@ -36,6 +37,12 @@ class ModelWrapper:
                             total_incorrect=None)
 
         pass
+
+    def predict(self, X_test):
+        if self.is_fit() is False:
+            raise NotFittedError()
+        else:
+            return self.model.predict(X_test)
 
     def use_grid(self, X_train, y_train, random_search, max_iter):
         return tk.grid_search_scores(self.model,
@@ -117,5 +124,8 @@ random_forest = ModelWrapper(RandomForestClassifier(random_state=1),
                                                       test_size=test_size,
                                                       random_state=random_state))
 
+random_forest.fit()
+print(type(random_forest))
+print(type(random_forest.model))
 
 #HYPERPAREMTER TUNING RANDOM FOREST
