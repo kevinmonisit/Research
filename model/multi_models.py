@@ -51,7 +51,14 @@ class ModelWrapper:
                                      y_train,
                                      random_search=random_search)
 
-    def fit(self, random_search=False, max_iter=500):
+    def fit(self, random_search=False, max_iter=500, refit=True):
+        """
+
+        :param random_search: whether to perform a grid search or a random gird search
+        :param max_iter: number of iterations to perform if grid search is random
+        :param refit: change the instance model to the newly fitted model
+        :return:
+        """
         with self.train_test_wrapper as splits:
             X_train, X_test, y_train, y_test = splits
             # fit to X_train so X_test has the correct number of columns
@@ -73,6 +80,8 @@ class ModelWrapper:
             self.results["total_incorrect"] = matrix[0][1] + matrix[1][0]
 
             self.results["accuracy"] = ((y_test.shape[0] - self.results["total_incorrect"]) / y_test.shape[0])
+
+            self.model = model_pipeline
 
             return model_pipeline, X_test, y_test
 
@@ -105,27 +114,27 @@ class ModelWrapper:
         return True
 
 ################################################################################################
-
-student_data = ms.get_student_data('../data/data.csv', bin=False)
-features = ["A8", "Has_504", "Student on Free or Reduced Lunch", "IEP/Specialized"]
-
-train_wrapper_args = (student_data[features],
-                      student_data['ChronicallyAbsent_in_HS'])
-test_size = 0.3
-random_state = 1
-
-# TrainTestSplitWrapper will always yield the same results (splits of the data)
-# if the random state is equal to one.
-
-random_forest = ModelWrapper(RandomForestClassifier(random_state=1),
-                             dict(),
-                             tk.TrainTestSplitWrapper(student_data[features],
-                                                      student_data['ChronicallyAbsent_in_HS'],
-                                                      test_size=test_size,
-                                                      random_state=random_state))
-
-random_forest.fit()
-print(type(random_forest))
-print(type(random_forest.model))
+#
+# student_data = ms.get_student_data('../data/data.csv', bin=False)
+# features = ["A8", "Has_504", "Student on Free or Reduced Lunch", "IEP/Specialized"]
+#
+# train_wrapper_args = (student_data[features],
+#                       student_data['ChronicallyAbsent_in_HS'])
+# test_size = 0.3
+# random_state = 1
+#
+# # TrainTestSplitWrapper will always yield the same results (splits of the data)
+# # if the random state is equal to one.
+#
+# random_forest = ModelWrapper(RandomForestClassifier(random_state=1),
+#                              dict(),
+#                              tk.TrainTestSplitWrapper(student_data[features],
+#                                                       student_data['ChronicallyAbsent_in_HS'],
+#                                                       test_size=test_size,
+#                                                       random_state=random_state))
+#
+# random_forest.fit()
+# print(type(random_forest))
+# print(type(random_forest.model))
 
 #HYPERPAREMTER TUNING RANDOM FOREST
