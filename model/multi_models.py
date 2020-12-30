@@ -1,6 +1,6 @@
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.exceptions import NotFittedError
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, roc_curve, roc_auc_score
 from sklearn.utils.validation import check_is_fitted
 import pandas as pd
 
@@ -33,8 +33,12 @@ class ModelWrapper:
         self.train_test_wrapper = train_test_wrapper
         self.parameters = parameters
 
-        self.results = dict(matrix=None, mean_cv_score=None, accuracy=None,
-                            total_incorrect=None)
+        self.results = dict(matrix=None,
+                            mean_cv_score=None,
+                            accuracy=None,
+                            total_incorrect=None,
+                            y_pred_prob=None,
+                            y_test=None) # used for roc/auc
 
         pass
 
@@ -79,14 +83,29 @@ class ModelWrapper:
             self.results["matrix"] = matrix
             self.results["total_incorrect"] = matrix[0][1] + matrix[1][0]
 
-            self.results["accuracy"] = ((y_test.shape[0] - self.results["total_incorrect"]) / y_test.shape[0])
+            self.results["accuracy"] = \
+                ((y_test.shape[0] - self.results["total_incorrect"]) / y_test.shape[0])
 
+            # ROC/AUC Preliminary Variables
+            self.results["y_test"] = y_test
+            self.results["y_pred_prob"] = model_pipeline.best_estimator_['model'].predict_proba(X_test)[:, 1]
+
+            # model becomes a grid search object.
+            # this is important because it acts as a wrapper for the classifier itself
             self.model = model_pipeline
 
             return model_pipeline, X_test, y_test
 
-    def get_roc_curve(selfs):
-        pass
+    def get_roc_curve(self):
+        # arguments
+        y_test_probs = (self.results["y_test"], self.results["y_pred_prob"])
+
+        fpr, tpr, thresholds = roc_curve(*y_test_probs)
+        auc = roc_auc_score(*y_test_probs)
+
+        print("\nAUC of %s: %.3f" % (self.model_name, auc), end='\n')
+
+        return fpr, tpr
 
     def get_fit_model(self):
         if self.fitted_model is None:
@@ -112,6 +131,19 @@ class ModelWrapper:
             return False
 
         return True
+
+
+def get_model_wrapper_list(models, X_test, y_test, random_state=1, test_size=0.2):
+    model_wrapper_list = []
+
+    for i in models:
+        model_wrapper_list.append(ModelWrapper(i,
+                                               dict(),
+                                               tk.TrainTestSplitWrapper(X_test,
+                                                                        y_test,
+                                                                        test_size=test_size,
+                                                                        random_state=random_state)))
+    return model_wrapper_list
 
 ################################################################################################
 #
