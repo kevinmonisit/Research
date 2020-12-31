@@ -133,7 +133,8 @@ class TrainTestSplitWrapper:
         """
         X_ = cp.deepcopy(self.X)
         y_ = cp.deepcopy(self.y)
-        return train_test_split(X_, y_, random_state=self.random_state, test_size=self.test_size)
+        return train_test_split(X_, y_, random_state=self.random_state, test_size=self.test_size,
+                                stratify=None)
 
     def __exit__(self, *args, **kwargs):
         pass

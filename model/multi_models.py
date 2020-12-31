@@ -32,6 +32,8 @@ class ModelWrapper:
         self.parameters = parameters
         self.train_test_wrapper = train_test_wrapper
         self.parameters = parameters
+        self.column_names = []
+        self.X_test = []
 
         self.results = dict(matrix=None,
                             mean_cv_score=None,
@@ -71,6 +73,10 @@ class ModelWrapper:
 
             X_train = pd.get_dummies(X_train)
             X_test = pd.get_dummies(X_test)
+
+            # get_dummies creates new columns
+            self.column_names = X_train.columns.values
+            self.X_test = X_test
 
             model_pipeline = self.use_grid(X_train, y_train,
                                            random_search, max_iter)
