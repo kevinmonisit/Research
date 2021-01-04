@@ -23,6 +23,7 @@ class ModelWrapper:
     def __init__(self, model,
                  parameters: dict,
                  train_test_wrapper,
+                 short_name="",
                  cv=5):
         self.model_name = model.__class__.__name__
 
@@ -33,6 +34,7 @@ class ModelWrapper:
         self.train_test_wrapper = train_test_wrapper
         self.parameters = parameters
         self.column_names = []
+        self.short_name = short_name
         self.X_test = []
 
         self.results = dict(matrix=None,
@@ -122,6 +124,12 @@ class ModelWrapper:
     def get_feature_importance(self):
         pass
 
+    def get_name(self):
+        if len(self.short_name) == 0:
+            return self.short_name
+        else:
+            return self.model_name
+
     def __str__(self):
         if self.is_fit() is False:
             return "This is a %s instance. It has not been fitted yet." % self.model_name
@@ -143,12 +151,19 @@ def get_model_wrapper_list(models, X_test, y_test, random_state=1, test_size=0.2
     model_wrapper_list = []
 
     for i in models:
-        model_wrapper_list.append(ModelWrapper(i,
+        # TODO:
+        # messy but easy hack of doing things
+        # will fix if need be
+        if isinstance(i, tuple) and len(i) < 2:
+            raise ValueError("tuple should be of length 2")
+
+        model_wrapper_list.append(ModelWrapper(i[0],
                                                dict(),
                                                tk.TrainTestSplitWrapper(X_test,
                                                                         y_test,
                                                                         test_size=test_size,
-                                                                        random_state=random_state)))
+                                                                        random_state=random_state),
+                                               short_name=i[1]))
     return model_wrapper_list
 
 ################################################################################################
